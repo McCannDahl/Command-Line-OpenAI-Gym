@@ -17,3 +17,12 @@ try:
     )
 except:
     print("Unable to register custom env")
+
+try:
+    register(
+        id='GolfCardGame-v0',
+        entry_point='custom_openai_frameworks.envs:GolfCardGameEnv',
+        max_episode_steps=800
+    )
+except:
+    print("Unable to register custom env")

@@ -1,9 +1,3 @@
-"""
-Classic cart-pole system implemented by Rich Sutton et al.
-Copied from http://incompleteideas.net/sutton/book/code/pole.c
-permalink: https://perma.cc/C9ZM-652R
-"""
-
 import math
 import gym
 from gym import spaces, logger
@@ -13,11 +7,6 @@ import random
 
 
 class CountUpEnv(gym.Env):
-
-    metadata = {
-        'render.modes': ['human', 'rgb_array'],
-        'video.frames_per_second': 50
-    }
 
     def __init__(self):
         self.reward = None

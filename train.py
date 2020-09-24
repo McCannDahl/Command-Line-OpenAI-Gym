@@ -29,18 +29,16 @@ import custom_openai_frameworks
 
 # 2) define our variables ############################################################################################################
 eval_interval: int = 1000
-num_iterations: int = eval_interval*10 # how long to train for. I recoment this be greater than eval_interval * 3
-initial_collect_steps: int = 1000 
+num_iterations: int = eval_interval*100 # how long to train for. I recoment this be greater than eval_interval * 3
 collect_steps_per_iteration: int = 1
 replay_buffer_max_length: int = 100000 
 batch_size: int = 64 
 learning_rate: float = 1e-3
 log_interval: int = 200
 num_eval_episodes: int = 10
-env_name: str = 'CountUp-v0'
-#env_name: str = 'CustomCartPole-v0'
+env_name: str = 'GolfCardGame-v0'
 model_number: str = str(time.time()) 
-model_number: str = '1600745505.6067228' # if you want to load a specific model
+#model_number: str = '1600835722.6843057' # if you want to load a specific checkpoint and continue training
 
 # 3) Setup & verify ############################################################################################################
 checkpoint_dir = "output/"+env_name+"/models/"+model_number+"/checkpoint/"
@@ -50,15 +48,13 @@ Path("output/"+env_name+"/models").mkdir(parents=True, exist_ok=True)
 Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
 Path(policy_dir).mkdir(parents=True, exist_ok=True)
 Path("output/"+env_name+"/graphs").mkdir(parents=True, exist_ok=True)
-    
-
 
 # 4) Setup tensorflow ############################################################################################################
 tf.compat.v1.enable_v2_behavior()
 
 train_py_env = suite_gym.load(env_name)
-eval_py_env = suite_gym.load(env_name)
 train_env = tf_py_environment.TFPyEnvironment(train_py_env)
+eval_py_env = suite_gym.load(env_name)
 eval_env = tf_py_environment.TFPyEnvironment(eval_py_env)
 
 # 4.1) Define the network ############################################################################################################
@@ -126,13 +122,9 @@ train_checkpointer = common.Checkpointer(
 )
 tf_policy_saver = policy_saver.PolicySaver(agent.policy)
 
-# 4.5) Setup loading the model ############################################################################################################
+# 4.5) Load an existing model if specified ############################################################################################################
 train_checkpointer.initialize_or_restore()
 train_step_counter = tf.compat.v1.train.get_global_step()
-try:
-    saved_policy = tf.compat.v2.saved_model.load(policy_dir)
-except:
-    pass
 
 # 4.6) helpful functions ############################################################################################################
 def collect_step(environment, policy, buffer):
@@ -169,16 +161,6 @@ agent.train_step_counter.assign(0)
 avg_return = compute_avg_return(eval_env, agent.policy, num_eval_episodes)
 print('agent eval avg return',avg_return)
 returns = [avg_return]
-
-
-def create_policy_eval_video(policy):
-    t_s = eval_env.reset()
-    eval_py_env.render()
-    while not t_s.is_last():
-        action_step = policy.action(t_s)
-        t_s = eval_env.step(action_step.action)
-        eval_py_env.render()
-    eval_py_env.close()
     
 # 5) Train #########################################################################################################
 for _ in range(num_iterations):
@@ -203,15 +185,13 @@ for _ in range(num_iterations):
         
 
 # 6) Capture data #########################################################################################################
-create_policy_eval_video(agent.policy)
-
 iterations = range(0, num_iterations + 1, eval_interval)
 plt.plot(iterations, returns)
 plt.ylabel('Average Return')
 plt.xlabel('Iterations')
-plt.savefig("output/"+env_name+"/graphs/"+str(time.time())+"-"+'training.png')
+plt.savefig("output/"+env_name+"/graphs/"+str(model_number)+"-"+'training.png')
 
-# save model
+# 7) Save training checkpoint and policy #########################################################################################################
 train_checkpointer.save(train_step_counter)
 tf_policy_saver.save(policy_dir)
 
