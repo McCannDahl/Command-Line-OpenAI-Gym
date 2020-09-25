@@ -12,6 +12,7 @@ class GolfCardGameEnv(gym.Env):
         self.steps_beyond_done = None
 
         # Setup game specific items
+        self.suits = None
         self.steps_taken = None
         self.number_of_players = 2
         self.discard_pile = None
@@ -23,7 +24,7 @@ class GolfCardGameEnv(gym.Env):
         self.distinct_cards = None
         self.hands = None
         self.is_end_of_game = None
-        self.cards, self.distinct_cards = self.get_cards()
+        self.cards, self.distinct_cards, self.suits = self.get_cards()
 
         self.outputs: list(str) = [
             'flip 00',
@@ -44,8 +45,10 @@ class GolfCardGameEnv(gym.Env):
         ]
 
         self.inputs = {
-            'discard points': {'low':-2,'high':10},
-            'stage points': {'low':-2,'high':11}
+            'discard points': {'low':-2,'high':11},
+            'stage points': {'low':-2,'high':11},
+            'discard suit': {'low':0,'high':4},
+            'stage suit': {'low':0,'high':4}
         }
         for player in range(self.number_of_players):
             for col in range(3):
@@ -106,7 +109,7 @@ class GolfCardGameEnv(gym.Env):
             cards.append({'id':'W'+str(i),'p':-2,'vis':False})
         distinct_cards.append('W')
         self.shuffle_cards(cards)
-        return cards, distinct_cards
+        return cards, distinct_cards, suits
     
     def shuffle_cards(self,cards):
         random.shuffle(cards)
@@ -143,8 +146,9 @@ class GolfCardGameEnv(gym.Env):
                         reward = 0 # I lost
                     else:
                         reward = (60 - myscore)*10 # TODO do this differently for more players
-                self.print_hands()
-                print('Game ended successfully',myscore)
+                if self.is_inputing:
+                    self.print_hands()
+                    print('Game ended successfully',myscore)
             else:
                 reward = 0 # don't be invalid
         else:
@@ -244,7 +248,7 @@ class GolfCardGameEnv(gym.Env):
         self.discard_pile = None
         self.stage_card = None
         self.steps_beyond_done = None
-        self.cards, self.distinct_cards = self.get_cards()
+        self.cards, self.distinct_cards, self.suits = self.get_cards()
         #print('len cards',len(self.cards))
         self.hands = self.deal_hands()
         if self.is_inputing is True:
@@ -371,27 +375,27 @@ class GolfCardGameEnv(gym.Env):
             elif col[0]['vis'] and col[1]['vis']: # both known and not equal
                 if self.stage_card and self.stage_card['id'][0] == col[0]['id'][0]:
                     return self.outputs.index('replace '+str(c)+str(1))
-                elif len(self.discard_pile)>0 and self.discard_pile[-1]['id'][0] == col[0]['id'][0]:
+                elif self.stage_card == None and len(self.discard_pile)>0 and self.discard_pile[-1]['id'][0] == col[0]['id'][0]:
                     return self.outputs.index('draw discard')
                 elif self.stage_card and self.stage_card['id'][0] == col[1]['id'][0]:
                     return self.outputs.index('replace '+str(c)+str(0))
-                elif len(self.discard_pile)>0 and self.discard_pile[-1]['id'][0] == col[1]['id'][0]:
+                elif self.stage_card == None and len(self.discard_pile)>0 and self.discard_pile[-1]['id'][0] == col[1]['id'][0]:
                     return self.outputs.index('draw discard')
             elif col[0]['vis']: # 1 known
                 if self.stage_card and self.stage_card['id'][0] == col[0]['id'][0]:
                     return self.outputs.index('replace '+str(c)+str(1))
-                elif len(self.discard_pile)>0 and self.discard_pile[-1]['id'][0] == col[0]['id'][0]:
+                elif self.stage_card == None and len(self.discard_pile)>0 and self.discard_pile[-1]['id'][0] == col[0]['id'][0]:
                     return self.outputs.index('draw discard')
             elif col[1]['vis']: # 1 known
                 if self.stage_card and self.stage_card['id'][0] == col[1]['id'][0]:
                     return self.outputs.index('replace '+str(c)+str(0))
-                elif len(self.discard_pile)>0 and self.discard_pile[-1]['id'][0] == col[1]['id'][0]:
+                elif self.stage_card == None and len(self.discard_pile)>0 and self.discard_pile[-1]['id'][0] == col[1]['id'][0]:
                     return self.outputs.index('draw discard')
             else: # neither known
                 pass
 
         # 2) take small cards
-        if len(self.discard_pile)>0 and self.discard_pile[-1]['p']<5:
+        if self.stage_card == None and len(self.discard_pile)>0 and self.discard_pile[-1]['p']<5:
             return self.outputs.index('draw discard')
 
         return self.get_random_valid_action()
@@ -563,6 +567,11 @@ class GolfCardGameEnv(gym.Env):
         else:
             self.hands[p][c][r]['vis'] = True
 
+    def get_suit(self,card):
+        if card['id'][0] == '1':
+            return card['id'][2:3]
+        return card['id'][1:2]
+
     def set_state(self):
         state= []
         if len(self.discard_pile) > 0:
@@ -573,6 +582,25 @@ class GolfCardGameEnv(gym.Env):
             state.append(self.stage_card['p'])
         else:
             state.append(11) # unknown
+
+        if len(self.discard_pile) > 0:
+            suit = self.get_suit(self.discard_pile[-1])
+            if self.discard_pile[-1]['id'][0] == 'W':
+                suit = int(self.discard_pile[-1]['id'][1])
+                state.append(suit)
+            else:
+                state.append(self.suits.index(suit))
+        else:
+            state.append(4) # unknown
+        if self.stage_card is not None:
+            suit = self.get_suit(self.stage_card)
+            if self.stage_card['id'][0] == 'W':
+                suit = int(self.stage_card['id'][1])
+                state.append(suit)
+            else:
+                state.append(self.suits.index(suit))
+        else:
+            state.append(4) # unknown
             
         for player in self.hands:
             for col in player:

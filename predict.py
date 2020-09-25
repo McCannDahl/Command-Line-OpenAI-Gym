@@ -29,7 +29,7 @@ import custom_openai_frameworks
 
 # 2) define our variables ############################################################################################################
 env_name: str = 'GolfCardGame-v0'
-model_number: str = '1600901469.939331' 
+model_number: str = '1600914467.6099823' 
 
 # 3) Setup & verify ############################################################################################################
 policy_dir = "output/"+env_name+"/models/"+model_number+"/policy/"

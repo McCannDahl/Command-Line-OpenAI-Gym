@@ -29,7 +29,7 @@ import custom_openai_frameworks
 
 # 2) define our variables ############################################################################################################
 eval_interval: int = 1000
-num_iterations: int = eval_interval*100 # how long to train for. I recoment this be greater than eval_interval * 3
+num_iterations: int = eval_interval*3000 # how long to train for. I recoment this be greater than eval_interval * 3
 collect_steps_per_iteration: int = 1
 replay_buffer_max_length: int = 100000 
 batch_size: int = 64 
@@ -38,7 +38,7 @@ log_interval: int = 200
 num_eval_episodes: int = 10
 env_name: str = 'GolfCardGame-v0'
 model_number: str = str(time.time()) 
-#model_number: str = '1600835722.6843057' # if you want to load a specific checkpoint and continue training
+model_number: str = '1600914467.6099823' # if you want to load a specific checkpoint and continue training
 
 # 3) Setup & verify ############################################################################################################
 checkpoint_dir = "output/"+env_name+"/models/"+model_number+"/checkpoint/"
